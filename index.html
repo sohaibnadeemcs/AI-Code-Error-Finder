@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <title>AI Code Error Finder & Fixer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Animated Background -->
+  <canvas id="bgCanvas"></canvas>
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+
+  <div class="container">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-badge">✨ AI Powered</div>
+      <h1>🔍 Code Error Finder <span class="gradient-text">& Fixer</span></h1>
+      <p>Paste your code, select the language, and let AI find and fix all errors instantly</p>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls-row">
+      <div class="lang-selector">
+        <label for="language">Programming Language</label>
+        <select id="language">
+          <option value="python">🐍 Python</option>
+          <option value="javascript">⚡ JavaScript</option>
+          <option value="html">🌐 HTML</option>
+          <option value="css">🎨 CSS</option>
+          <option value="java">☕ Java</option>
+          <option value="cpp">⚙️ C++</option>
+          <option value="sql">🗄️ SQL</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button id="analyzeBtn" onclick="analyzeCode()">🔍 Find & Fix Errors</button>
+        <button class="clear-btn" onclick="clearAll()">🗑️</button>
+      </div>
+    </div>
+
+    <!-- Editor Area -->
+    <div class="editor-section">
+      <div class="editor-card">
+        <div class="editor-header">
+          <span>📝 Your Code</span>
+          <span id="lineCount">0 lines</span>
+        </div>
+        <textarea id="codeInput" placeholder="Paste your code here..." spellcheck="false"></textarea>
+      </div>
+
+      <div class="editor-card">
+        <div class="editor-header">
+          <span>✅ Fixed Code</span>
+          <button class="copy-btn" onclick="copyFixed()" id="copyFixedBtn" style="display:none;">📋 Copy</button>
+        </div>
+        <div id="fixedCodeArea" class="fixed-code-area">
+          <div class="placeholder-text">Fixed code will appear here...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" style="display:none;">
+      <div class="loading-bar"><div class="loading-fill"></div></div>
+      <p class="loading-text">🤖 AI is analyzing your code...</p>
+    </div>
+
+    <!-- Errors -->
+    <div id="errorsSection" style="display:none;">
+      <div class="errors-header">
+        <h2>🐛 Errors Found</h2>
+        <span id="errorCount" class="error-badge">0 errors</span>
+      </div>
+      <div id="errorsList"></div>
+    </div>
+
+    <!-- No Errors -->
+    <div id="noErrors" style="display:none;">
+      <div class="no-errors-box">✅ <strong>No errors found!</strong> Your code looks clean.</div>
+    </div>
+
+    <!-- Error message -->
+    <div id="errorBox" class="error-box" style="display:none;"></div>
+
+    <p class="footer">Built by Sohaib Nadeem — Powered by Google Gemini AI</p>
+  </div>
+
+  <script src="script.js"></script>
+
+  <script>
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resize() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const COLORS = ['#58a6ff','#3fb950','#bc8cff','#ff7b72','#ffa657'];
+    const COUNT  = window.innerWidth < 500 ? 30 : 60;
+    const particles = Array.from({ length: COUNT }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      radius: Math.random() * 1.5 + 0.5,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      speedX: (Math.random() - 0.5) * 0.4,
+      speedY: (Math.random() - 0.5) * 0.4,
+      opacity: Math.random() * 0.5 + 0.1,
+    }));
+
+    function drawGrid() {
+      ctx.strokeStyle = 'rgba(88,166,255,0.04)';
+      ctx.lineWidth = 1;
+      const s = 60;
+      for (let x = 0; x < canvas.width; x += s) {
+        ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += s) {
+        ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width, y); ctx.stroke();
+      }
+    }
+
+    function connectParticles() {
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          if (dist < 100) {
+            ctx.strokeStyle = `rgba(88,166,255,${0.06*(1-dist/100)})`;
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#0d1117';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      drawGrid();
+      connectParticles();
+      particles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2);
+        ctx.fillStyle = p.color + Math.floor(p.opacity*255).toString(16).padStart(2,'0');
+        ctx.fill();
+        p.x += p.speedX;
+        p.y += p.speedY;
+        if (p.x < 0 || p.x > canvas.width)  p.speedX *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.speedY *= -1;
+      });
+      requestAnimationFrame(animate);
+    }
+    animate();
+  </script>
+
+</body>
+</html>
